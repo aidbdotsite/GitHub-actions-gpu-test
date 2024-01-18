@@ -23,7 +23,7 @@ jobs:
 
   build:
     name: Release bdist wheels
-    needs: matrix_perparation
+    needs: matrix_preparation
     runs-on: [self-hosted, gpu]
     strategy:
       fail-fast: false
