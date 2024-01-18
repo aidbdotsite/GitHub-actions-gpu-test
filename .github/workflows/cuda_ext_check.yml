@@ -50,3 +50,4 @@ jobs:
         run: |
           find /usr/local/cuda-${CUDA_VERSION} --maxdepth 2 
           du -h --max-depth=2 /usr/local/cuda-${CUDA_VERSION}
+          nvidia-smi
