@@ -1,0 +1,52 @@
+name: Check CUDA Extension Build
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'version.txt'
+
+jobs:
+  matrix_preparation:
+    name: Prepare Container List
+    if: github.repository == 'aidbdotsite/GitHub-actions-gpu-test'
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - id: set-matrix
+        run: |
+          cuda_ext=$(cat .cuda_ext.json | tr '\n' ' ')
+          echo "matrix=$cuda_ext" >> $GITHUB_OUTPUT
+
+  build:
+    name: Release bdist wheels
+    needs: matrix_perparation
+    runs-on: [self-hosted, gpu]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.matrix_preparation.outputs.matrix) }}
+    container:
+      image: ${{ matrix.build.cuda_image }}
+      options: --gpus all --rm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install PyTorch
+        run: eval "${{ matrix.build.torch_command }}"
+      - name: Download cub for CUDA 10.2
+        run: |
+          CUDA_VERSION=$(nvcc -V | awk -F ',| ' '/release/{print $6}')
+
+          if [[ "$CUDA_VERSION" == "10.2" ]]; then
+            wget https://github.com/NVIDIA/cub/archive/refs/tags/1.8.0.zip
+            unzip 1.8.0.zip
+            cp -r cub-1.8.0/cub /usr/local/cuda-${CUDA_VERSION}/include/
+          fi
+      
+      - name: Check
+        run: |
+          find /usr/local/cuda-${CUDA_VERSION} --maxdepth 2 
+          du -h --max-depth=2 /usr/local/cuda-${CUDA_VERSION}
